@@ -3,9 +3,10 @@ using .TTNSsketch
 using .TTNSsketch.ErrorReporting: report_errors
 using .TTNSsketch.TopologyNotation: vertices, C
 using .TTNSsketch.Sketching: compute_Zwk
+using .TTNSsketch.Evaluate: sum_ttns
 using Printf
-using ITensors: set_warn_order, norm, inds, tags, array
-using LinearAlgebra: norm
+using ITensors: set_warn_order, inds, tags, array
+using LinearAlgebra
 using Plots
 gr()  # Use GR backend for LaTeX support
 using LaTeXStrings
@@ -49,7 +50,7 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     n_total = length(all_keys)
     n_drop = Int(round(drop_prob * n_total))
     
-    # Randomly select keys to drop (these will be unseen during training)
+    # Randomly select keys to drop (these will be not be seen during training)
     drop_indices = randperm(n_total)[1:n_drop]
     dropped_keys = Set(all_keys[drop_indices])
     seen_keys = Set(setdiff(all_keys, dropped_keys))
@@ -68,7 +69,7 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     
     # Train TTNS on seen keys only
     ttns_recov = deepcopy(ttns)
-    CoreDeterminingEquations.compute_Gks!(training_dict, ttns_recov; sketching_kwargs)
+    CoreDeterminingEquations.compute_Gks!(training_dict, ttns_recov; sketching_kwargs, normalize_Gks=true)
     
     # Compute errors ONLY for unseen points (keys that were dropped and NOT in training)
     unseen_errors = Float64[]
@@ -95,6 +96,7 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     println("  Unseen points evaluated: $(length(unseen_errors))")
     println("  Mean rel error (unseen): $(isnan(unseen_mean) ? "N/A" : @sprintf("%.6e", unseen_mean))")
     println("  Std rel error (unseen): $(isnan(unseen_std) ? "N/A" : @sprintf("%.6e", unseen_std))")
+    println("  Sum of TTNS: $(sum_ttns(ttns_recov))")
   end
 
   return unseen_mean_errors, unseen_std_errors, percentages
@@ -104,7 +106,8 @@ function create_plot(unseen_mean_errors, unseen_std_errors, percentages;
                      y_ticks_pos, y_ticks_labels, y_lims, plot_label::String,
                      plot_title::String,
                      plot_fontsize=18, legend_fontsize=16)
-  # X-axis ticks
+  unseen_mean_errors = [min(error, 1.0) for error in unseen_mean_errors]
+                     # X-axis ticks
   x_ticks_pos = percentages
   x_ticks_labels = [latexstring(@sprintf("%.0f", x)) for x in x_ticks_pos]
   x_ticks = (x_ticks_pos, x_ticks_labels)
@@ -117,9 +120,9 @@ function create_plot(unseen_mean_errors, unseen_std_errors, percentages;
 
   # Create plot
   plt = plot(xlabel=latexstring("\\mathrm{Percentage~of~seen~points~(\\%)}"),
-             ylabel=latexstring("\\mathrm{Mean~rel.~error~(\\%)}"),
+             ylabel=latexstring("\\mathrm{Mean~rel.~error}"),
              title=latexstring(plot_title),
-             legend=:topright,
+             legend=:bottomleft,
              xticks=x_ticks,
              yticks=y_ticks,
              ylims=y_lims,
@@ -151,9 +154,9 @@ ttns_binary = ExampleTopologies.BinaryTree(4)  # argument is depth, not vertex n
 ttns_linear = ExampleTopologies.Linear(15)  # Match number of vertices (2^4 - 1 = 15)
 
 # Common plot settings
-y_ticks_pos = [0, 3, 6, 9, 12]
-y_ticks_labels = [latexstring("0"), latexstring("3"), latexstring("6"), latexstring("9"), latexstring("\\geq 12")]
-y_lims = (0, 12.1)
+y_ticks_pos = [0, 0.2, 0.4, 0.6, 0.8, 1]
+y_ticks_labels = [latexstring("0"), latexstring("0.2"), latexstring("0.4"), latexstring("0.6"), latexstring("0.8"), latexstring(">1")]
+y_lims = (0, 1)
 plot_fontsize = 18
 legend_fontsize = plot_fontsize - 2
 
