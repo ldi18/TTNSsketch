@@ -35,6 +35,8 @@ module Sketching
 
   """
   Sketching function discrete embedding and Matrix input.
+
+  - Sample version of the function is only tested for order=1.
   """
   function fill_marginal_distribution_tensor!(f::Matrix{Int64}, M_tensor::ITensor, vertex_selection::Vector{T}, ttns::TTNSType{T}; kwargs...) where {T}
     sketched_bits = [ttns.vertex_to_input_pos_map[v] for v in vertex_selection]

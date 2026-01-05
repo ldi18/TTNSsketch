@@ -60,14 +60,20 @@ function benchmark_single_continuous(sketching_order::Int, n_vertices::Int;
   )
   cttns = ExampleTopologies.Linear(n_vertices; continuous=true, local_basis_kwargs=local_basis_kwargs)
   
-  # Create ground truth probability dictionary with specified order dependencies
-  # Use order=5 for fifth-order dependencies
-  f_ground_truth = GraphicalModels.continuous_higher_order_probability_dict(cttns; 
-                                                                          N=n_samples, 
-                                                                          order=5, 
-                                                                          seed=seed, 
-                                                                          a=0.0, 
-                                                                          b=T)
+  # Create ground truth model
+  if initialization_mode == :random
+    model_ground_truth = GraphicalModels.random_cGraphicalModel(cttns; seed=seed)
+  elseif initialization_mode == :fixed_modes
+    error("Fixed modes initialization not implemented. Please provide your own implementation.")
+  else
+    error("Unknown initialization_mode: $initialization_mode. Use :random or :fixed_modes")
+  end
+  
+  # Generate sample points and evaluate ground truth function
+  d = size(collect(cttns.vertex_to_input_pos_map))[1]
+  Random.seed!(seed)  # Use same seed as model for consistency
+  xs = [Tuple(T * rand(d)) for _ in 1:n_samples]
+  f_ground_truth = Dict(x => TTNSsketch.evaluate(model_ground_truth.ttns, x) for x in xs)
   
   # Recover using sketching
   sketching_kwargs = create_sketching_kwargs(sketching_order, seed; enforce_non_recursive=enforce_non_recursive)
@@ -93,8 +99,6 @@ function benchmark_single_continuous(sketching_order::Int, n_vertices::Int;
   mean_rel_error = 0.0
   max_abs_diff = 0.0
   
-  # Get all keys from the ground truth dictionary
-  xs = collect(keys(f_ground_truth))
   f_vals_ground_truth = [f_ground_truth[x] for x in xs]
   max_f_val = maximum(f_vals_ground_truth)
   
@@ -131,7 +135,7 @@ function run_benchmark_continuous(; max_n::Int = 12,
                                   n_samples::Int = 50000,
                                   track_runtime::Bool = false)
   mode_label = initialization_mode == :random ? "random" : "fixed_$(n_active_modes)_modes"
-  results_path = joinpath(@__DIR__, "sketching_window_size_continuous_dict_order5_$(mode_label)_results.csv")
+  results_path = joinpath(@__DIR__, "system_size_continuous_$(mode_label)_results.csv")
   set_warn_order(max_n+1)
   
   # Auto-reload if CSV exists (always use existing data if available)
@@ -271,7 +275,7 @@ function run_benchmark_continuous(; max_n::Int = 12,
   
   # Create and save combined plot only
   plt_combined = plot_combined_continuous(plt_error, plt_runtime; fontsize=18)
-  output_pdf_combined = joinpath(@__DIR__, "sketching_window_size_continuous_dict_order5_$(mode_label)_combined.pdf")
+  output_pdf_combined = joinpath(@__DIR__, "system_size_continuous_$(mode_label)_combined.pdf")
   savefig(plt_combined, output_pdf_combined)
   println("Combined plot saved to: $output_pdf_combined")
   
@@ -326,7 +330,7 @@ function create_error_plot_continuous(df, sketching_orders; fontsize=18, label_p
   xticks_labels = [latexstring("$val") for val in n_vals]
   
   plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=L"\mathrm{(e)~Mean~relative~error}",
+             title=L"\mathrm{(a)~Mean~relative~error}",
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yticks=(y_ticks_pos, y_ticks_labels),
@@ -439,8 +443,8 @@ function create_runtime_plot_continuous(df, sketching_orders; fontsize=18, label
   ylims_top = max_runtime * 1.3
   
   # Generate ticks based on data range - show all ticks in the range
-  data_min_exp = isfinite(log10(min_runtime)) ? floor(Int, log10(min_runtime)) : -3
-  data_max_exp = isfinite(log10(max_runtime)) ? ceil(Int, log10(max_runtime)) : 2
+  data_min_exp = -1
+  data_max_exp = 2
   min_tick_val = 10.0^-1
   max_tick_val = 10.0^2.5
   
@@ -492,7 +496,7 @@ function create_runtime_plot_continuous(df, sketching_orders; fontsize=18, label
   xticks_labels = [latexstring("$val") for val in n_vals]
   
   plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=L"\mathrm{(f)~Runtime~(seconds)}",
+             title=L"\mathrm{(b)~Runtime~(seconds)}",
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),
@@ -625,6 +629,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
   println("\n" * "="^60)
   println("Benchmark complete!")
   println("  Plot saved:")
-  println("    - sketching_window_size_continuous_dict_order5_random_combined.pdf")
+  println("    - system_size_continuous_random_combined.pdf")
   println("="^60)
 end

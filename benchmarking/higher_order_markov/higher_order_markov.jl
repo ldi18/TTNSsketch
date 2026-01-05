@@ -443,7 +443,7 @@ function create_runtime_plot(df; n_vertices::Int, β::Real, fontsize=18)
   
   plt = plot(xlabel=latexstring("\\mathrm{Markov~Sketching~Order}~n_{\\mathrm{Sketch}}"), 
              ylabel="",
-             title=latexstring("\\mathrm{(d)~Runtime}~(s)"),
+             title=latexstring("\\mathrm{(d)~Runtime~(seconds)}"),
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),

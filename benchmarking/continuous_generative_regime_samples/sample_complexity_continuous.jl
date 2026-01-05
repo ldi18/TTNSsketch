@@ -147,17 +147,26 @@ function run_benchmark_continuous(; β::Real = 1.0,
   
   # Auto-reload if CSV exists (always use existing data if available)
   csv_exists = isfile(results_path)
+  df = nothing
+  
   if csv_exists
     println("Loading existing results from: $results_path")
-    df = CSV.read(results_path, DataFrame)
-    # Handle backward compatibility: if is_recursive column doesn't exist, add it (default to false)
-    if !(:is_recursive in propertynames(df))
-      df.is_recursive = false
-    end
-    # Handle backward compatibility: if n_samples or sample_exponent don't exist, we need to recompute
-    if !(:n_samples in propertynames(df)) || !(:sample_exponent in propertynames(df))
-      println("WARNING: Existing CSV missing n_samples or sample_exponent columns. Recomputing...")
-      csv_exists = false  # Force recompute
+    try
+      df = CSV.read(results_path, DataFrame)
+      # Handle backward compatibility: if is_recursive column doesn't exist, add it (default to false)
+      if !(:is_recursive in propertynames(df))
+        df.is_recursive = false
+      end
+      # Handle backward compatibility: if n_samples or sample_exponent don't exist, we need to recompute
+      if !(:n_samples in propertynames(df)) || !(:sample_exponent in propertynames(df))
+        println("WARNING: Existing CSV missing n_samples or sample_exponent columns. Recomputing...")
+        df = nothing  # Clear df to force recompute
+        csv_exists = false  # Force recompute
+      end
+    catch e
+      println("WARNING: Error reading CSV file: $e. Recomputing...")
+      df = nothing
+      csv_exists = false
     end
   end
   
@@ -289,11 +298,14 @@ function run_benchmark_continuous(; β::Real = 1.0,
     df = DataFrame(rows)
     CSV.write(results_path, df)
     println("Results saved to: $results_path")
-  else
+  elseif !csv_exists && !recompute
     error("CSV file not found. Set recompute=true to generate data.")
   end
   
-  # Filter to desired β and initialization mode
+  # Filter to desired β and initialization mode (df should be defined at this point)
+  if df === nothing
+    error("No data available. CSV file not found and recompute=false.")
+  end
   df = df[df.beta .== β .&& df.initialization_mode .== string(initialization_mode), :]
   
   return df
@@ -392,8 +404,8 @@ function create_error_plot_continuous(df; fontsize=18, label_prefix="(a)")
     end
   end
   
-  # Get the actual color from the palette
-  plot_color = palette(:default)[1]
+  # Use blue color to match other plots
+  plot_color = :blue
   
   # Compute error bars: lower = mean - min, upper = max - mean
   # This shows the full range from minimum to maximum relative error (not standard deviation)
@@ -501,7 +513,7 @@ function create_runtime_plot_continuous(df; fontsize=18, label_prefix="(b)")
     y_vals = y_vals[valid_idx]
     plot!(plt, x_vals, y_vals,
           marker=:o, label="", 
-          color=1, linewidth=2.5, markersize=7)
+          color=:blue, linewidth=2.5, markersize=7)
   end
   
   return plt

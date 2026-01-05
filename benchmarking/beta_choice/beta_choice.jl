@@ -244,7 +244,7 @@ function create_runtime_plot(df, sketching_label; n_vertices::Int, β::Real, fon
         push!(yticks_labels, latexstring("$(@sprintf("%.1f", mantissa_rounded))"))
       else
         # Use LaTeX scientific notation without "e" and without "+00"
-        push!(yticks_labels, latexstring("$(@sprintf("%.1f", mantissa_rounded))\\times 10^{$exp}"))
+        push!(yticks_labels, latexstring("$(@sprintf("%.1f", mantissa_rounded))\\cdot 10^{$exp}"))
       end
     else
       push!(yticks_labels, latexstring("0"))
@@ -265,7 +265,7 @@ function create_runtime_plot(df, sketching_label; n_vertices::Int, β::Real, fon
   
   plt = plot(xlabel=latexstring("\\beta_{\\mathrm{dim}}"), 
              ylabel="",
-             title=latexstring("\\mathrm{(b)~Runtime~(s)}"),
+             title=latexstring("\\mathrm{(b)~Runtime~(seconds)}"),
              legend=:topleft,
              xticks=(xticks_pos, xticks_labels),
              xlims=(xlims_left, xlims_right),

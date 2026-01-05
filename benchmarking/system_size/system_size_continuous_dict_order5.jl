@@ -61,10 +61,10 @@ function benchmark_single_continuous(sketching_order::Int, n_vertices::Int;
   cttns = ExampleTopologies.Linear(n_vertices; continuous=true, local_basis_kwargs=local_basis_kwargs)
   
   # Create ground truth probability dictionary with specified order dependencies
-  # Use order=1 to match the behavior of random_cGraphicalModel (first-order dependencies)
+  # Use order=5 for fifth-order dependencies
   f_ground_truth = GraphicalModels.continuous_higher_order_probability_dict(cttns; 
                                                                           N=n_samples, 
-                                                                          order=1, 
+                                                                          order=5, 
                                                                           seed=seed, 
                                                                           a=0.0, 
                                                                           b=T)
@@ -131,7 +131,7 @@ function run_benchmark_continuous(; max_n::Int = 12,
                                   n_samples::Int = 50000,
                                   track_runtime::Bool = false)
   mode_label = initialization_mode == :random ? "random" : "fixed_$(n_active_modes)_modes"
-  results_path = joinpath(@__DIR__, "sketching_window_size_continuous_dict_$(mode_label)_results.csv")
+  results_path = joinpath(@__DIR__, "system_size_continuous_dict_order5_$(mode_label)_results.csv")
   set_warn_order(max_n+1)
   
   # Auto-reload if CSV exists (always use existing data if available)
@@ -271,7 +271,7 @@ function run_benchmark_continuous(; max_n::Int = 12,
   
   # Create and save combined plot only
   plt_combined = plot_combined_continuous(plt_error, plt_runtime; fontsize=18)
-  output_pdf_combined = joinpath(@__DIR__, "sketching_window_size_continuous_dict_$(mode_label)_combined.pdf")
+  output_pdf_combined = joinpath(@__DIR__, "system_size_continuous_dict_order5_$(mode_label)_combined.pdf")
   savefig(plt_combined, output_pdf_combined)
   println("Combined plot saved to: $output_pdf_combined")
   
@@ -321,12 +321,12 @@ function create_error_plot_continuous(df, sketching_orders; fontsize=18, label_p
   end
   
   # Generate x-axis ticks with LaTeX strings
-  xtick_range = 1:9
-  xticks_pos = Float64.(xtick_range)
-  xticks_labels = [latexstring("$val") for val in xtick_range]
+  n_vals = sort(unique(df.n_vertices))
+  xticks_pos = Float64.(n_vals)
+  xticks_labels = [latexstring("$val") for val in n_vals]
   
   plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=L"\mathrm{(c)~Mean~relative~error}",
+             title=L"\mathrm{(e)~Mean~relative~error}",
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yticks=(y_ticks_pos, y_ticks_labels),
@@ -439,8 +439,8 @@ function create_runtime_plot_continuous(df, sketching_orders; fontsize=18, label
   ylims_top = max_runtime * 1.3
   
   # Generate ticks based on data range - show all ticks in the range
-  data_min_exp = -1
-  data_max_exp = 2
+  data_min_exp = isfinite(log10(min_runtime)) ? floor(Int, log10(min_runtime)) : -3
+  data_max_exp = isfinite(log10(max_runtime)) ? ceil(Int, log10(max_runtime)) : 2
   min_tick_val = 10.0^-1
   max_tick_val = 10.0^2.5
   
@@ -487,12 +487,12 @@ function create_runtime_plot_continuous(df, sketching_orders; fontsize=18, label
   yticks_labels = yticks_labels[sorted_idx]
   
   # Generate x-axis ticks with LaTeX strings
-  xtick_range = 1:9
-  xticks_pos = Float64.(xtick_range)
-  xticks_labels = [latexstring("$val") for val in xtick_range]
+  n_vals = sort(unique(df.n_vertices))
+  xticks_pos = Float64.(n_vals)
+  xticks_labels = [latexstring("$val") for val in n_vals]
   
   plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=L"\mathrm{(d)~Runtime~(seconds)}",
+             title=L"\mathrm{(f)~Runtime~(seconds)}",
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),
@@ -625,6 +625,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
   println("\n" * "="^60)
   println("Benchmark complete!")
   println("  Plot saved:")
-  println("    - sketching_window_size_continuous_dict_random_combined.pdf")
+  println("    - system_size_continuous_dict_order5_random_combined.pdf")
   println("="^60)
 end
