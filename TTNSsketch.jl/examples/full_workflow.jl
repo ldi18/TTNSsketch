@@ -15,7 +15,7 @@ ttns = ExampleTopologies.ExampleTreeFromPaper()
 #)
 
 use_sample_matrix = false  # Either choose samples implying the probability distribution,
-                           # or use the exact function values. 
+                           # or use the exact function values. The sample-based mode is only tested for order=1.
 d = length(ttns.x_indices) # dimensions
 set_warn_order(d+1)
 N = 30000                  # Only used if use_sample_matrix is true.
