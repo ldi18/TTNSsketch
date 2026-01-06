@@ -12,8 +12,6 @@ module Evaluate
 
   """
   Function to evaluate the TTNS for an input x1, x2, ..., xd.
-
-  Works only for binary input variables.
   """
   function evaluate(ttns::dTTNSType, input_values::NTuple{N, Int64}) where {N}
     if length(input_values) != length(ttns.G)
@@ -69,7 +67,7 @@ module Evaluate
   Contract all (c)ttns cores Gk in vertex_selection. If a vertex selection is provieded, only the cores in the selection and trace out all
   virtual legs. Otherwise, contract all cores. Inputs allows to fix certain input legs to a specific value (Works for binary only and operates on virtual input legs).
   """
-  function contract_ttns(cttns::TTNSType; vertex_selection::Vector{T}=[], trace_open_alpha::Bool = false, inputs::Dict{Int64, Int64}=Dict{Int, Int}())::ITensor where {T}   # TODO: Specify type with Union, rename cttns to ttns?
+  function contract_ttns(cttns::TTNSType{T}; vertex_selection::Vector{T}=Vector{T}(), trace_open_alpha::Bool = false, inputs::Dict{T, Int64}=Dict{T, Int64}())::ITensor where {T}   # TODO: Specify type with Union, rename cttns to ttns?
     ITensors.disable_warn_order()
     result = 1
     for (xk_key, _) in cttns.x_indices
