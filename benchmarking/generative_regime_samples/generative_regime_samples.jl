@@ -42,7 +42,7 @@ function run_generative_regime_experiment(ttns, topology_name::String;
   n_samples_list = [Int(round(10.0^exp)) for exp in sample_exponents]
 
   # Store results
-  mean_errors = Float64[]
+  mean_errors = Float64[]  # Mean relative error
   min_errors = Float64[]  # Minimum relative error
   max_errors = Float64[]  # Maximum relative error
   n_samples_used = Int[]
@@ -66,14 +66,6 @@ function run_generative_regime_experiment(ttns, topology_name::String;
       sample_matrix = reduce(vcat, [collect(key)' for key in sampled_keys])
     end
     
-    # Count unique samples (unique rows in the sample matrix)
-    # Convert each row to a tuple for hashing
-    unique_samples = Set{Tuple{Vararg{Int}}}()
-    for i in 1:size(sample_matrix, 1)
-      push!(unique_samples, Tuple(sample_matrix[i, :]))
-    end
-    n_unique_samples = length(unique_samples)
-    
     # Train TTNS on samples
     ttns_recov = deepcopy(ttns)
     CoreDeterminingEquations.compute_Gks!(sample_matrix, ttns_recov; sketching_kwargs)
@@ -83,6 +75,18 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     prob_threshold = 1e-10
     all_keys = collect(keys(probability_dict))
     keys_filtered = [key for key in all_keys if probability_dict[key] > prob_threshold]
+    
+    # Count unique samples that are in keys_filtered (above threshold)
+    # Convert keys_filtered to a Set for fast lookup
+    keys_filtered_set = Set(keys_filtered)
+    unique_samples_above_threshold = Set{Tuple{Vararg{Int}}}()
+    for i in 1:size(sample_matrix, 1)
+      sample_tuple = Tuple(sample_matrix[i, :])
+      if sample_tuple in keys_filtered_set
+        push!(unique_samples_above_threshold, sample_tuple)
+      end
+    end
+    n_unique_samples_above_threshold = length(unique_samples_above_threshold)
     
     all_errors = Float64[]
     invalid_evaluations = 0
@@ -118,8 +122,9 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     min_error = isempty(finite_errors) ? NaN : minimum(finite_errors)
     max_error = isempty(finite_errors) ? NaN : maximum(finite_errors)
     
-    # Calculate unique ratio
-    unique_ratio = n_unique_samples / (2^d)
+    # Calculate unique ratio: unique samples above threshold / total keys above threshold
+    n_keys_above_threshold = length(keys_filtered)
+    unique_ratio = n_keys_above_threshold > 0 ? n_unique_samples_above_threshold / n_keys_above_threshold : 0.0
     
     push!(mean_errors, mean_error)
     push!(min_errors, min_error)
@@ -128,7 +133,7 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     push!(unique_ratios, unique_ratio)
     
     println("  Number of samples: $n_samples")
-    println("  Unique samples in input space: $n_unique_samples / $(2^d)")
+    println("  Unique samples above threshold: $n_unique_samples_above_threshold / $n_keys_above_threshold (out of $(2^d) total possible)")
     println("  Total keys: $(length(all_keys)), Keys above threshold ($prob_threshold): $(length(keys_filtered))")
     println("  Mean rel error (finite): $(isnan(mean_error) ? "N/A" : @sprintf("%.6e", mean_error))")
     println("  Min rel error (finite): $(isnan(min_error) ? "N/A" : @sprintf("%.6e", min_error))")
@@ -137,13 +142,14 @@ function run_generative_regime_experiment(ttns, topology_name::String;
   end
 
   # Print unique ratios as a list
-  println("\n  Unique ratios (unique_samples / 2^$d):")
+  println("\n  Unique ratios (unique_samples_above_threshold / keys_above_threshold):")
   println("  [$(join([@sprintf("%.6f", r) for r in unique_ratios], ", "))]")
 
   return mean_errors, min_errors, max_errors, n_samples_used, unique_ratios
 end
 
-function create_error_plot(mean_errors_binary, n_samples_binary, mean_errors_linear, n_samples_linear;
+function create_error_plot(mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary,
+                           mean_errors_linear, min_errors_linear, max_errors_linear, n_samples_linear;
                            y_ticks_pos, y_ticks_labels, y_lims,
                            plot_fontsize=18, legend_fontsize=16)
   # X-axis ticks (use log scale for samples) - format like y ticks
@@ -207,18 +213,34 @@ function create_error_plot(mean_errors_binary, n_samples_binary, mean_errors_lin
              titlefontsize=plot_fontsize,
              linewidth=2.5, markersize=7, markerstrokewidth=0.1)
 
-  # Plot both curves
+  # Calculate error bar ranges (distance below and above mean)
+  error_below_binary = [max(0.0, mean_errors_binary[i] - min_errors_binary[i]) for i in 1:length(mean_errors_binary)]
+  error_above_binary = [max(0.0, max_errors_binary[i] - mean_errors_binary[i]) for i in 1:length(mean_errors_binary)]
+  error_below_linear = [max(0.0, mean_errors_linear[i] - min_errors_linear[i]) for i in 1:length(mean_errors_linear)]
+  error_above_linear = [max(0.0, max_errors_linear[i] - mean_errors_linear[i]) for i in 1:length(mean_errors_linear)]
+
+  # Plot both curves with error bars
   plot!(plt, 
         [n_samples_binary[i] for i in sort_idx_binary], 
         [mean_errors_binary[i] for i in sort_idx_binary],
+        yerror=([error_below_binary[i] for i in sort_idx_binary], [error_above_binary[i] for i in sort_idx_binary]),
         marker=:o, label=latexstring("\\mathrm{Binary~Tree}"), 
-        color=:blue, linewidth=2.5, markersize=7, markerstrokewidth=0.1)
+        color=:blue, 
+        linecolor=:blue, 
+        markercolor=:blue,
+        linewidth=2.5, markersize=7, markerstrokewidth=0.1,
+        capsize=3, capthickness=1.5)
   
   plot!(plt, 
         [n_samples_linear[i] for i in sort_idx_linear], 
         [mean_errors_linear[i] for i in sort_idx_linear],
+        yerror=([error_below_linear[i] for i in sort_idx_linear], [error_above_linear[i] for i in sort_idx_linear]),
         marker=:o, label=latexstring("\\mathrm{Linear}"), 
-        color=:red, linewidth=2.5, markersize=7, markerstrokewidth=0.1)
+        color=:red,
+        linecolor=:red,
+        markercolor=:red,
+        linewidth=2.5, markersize=7, markerstrokewidth=0.1,
+        capsize=3, capthickness=1.5)
 
   return plt
 end
@@ -269,8 +291,8 @@ function create_unique_ratio_plot(unique_ratios_binary, n_samples_binary,
 
   # Create plot (log-log scale)
   plt = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
-             ylabel=latexstring("\\mathrm{Number~of~unique~seen~samples~(fraction)}"),
-             title=latexstring("\\mathrm{(b)~Number~of~unique~seen~samples~vs.~Number~of~samples~}N"),
+             ylabel=latexstring("\\mathrm{Fraction~of~seen~keys}"),
+             title=latexstring("\\mathrm{(b)~Fraction~of~seen~keys~vs.~Number~of~samples~}N"),
              legend=:bottomright,
              xscale=:log10,
              yscale=:log10,
@@ -330,8 +352,8 @@ mean_errors_linear, min_errors_linear, max_errors_linear, n_samples_linear, uniq
                                    order=1)
 
 # Create plots
-plt_error = create_error_plot(mean_errors_binary, n_samples_binary, 
-                              mean_errors_linear, n_samples_linear;
+plt_error = create_error_plot(mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary,
+                              mean_errors_linear, min_errors_linear, max_errors_linear, n_samples_linear;
                               y_ticks_pos=y_ticks_pos, 
                               y_ticks_labels=y_ticks_labels,
                               y_lims=y_lims,
