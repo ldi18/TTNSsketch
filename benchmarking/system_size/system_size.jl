@@ -230,8 +230,9 @@ function create_error_plot(df, sketching_orders; fontsize=18)
   xticks_pos = Float64.(n_vals)
   xticks_labels = [latexstring("$val") for val in n_vals]
   
-  plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=latexstring("\\mathrm{(a)~Max.~Rel.~Error}~\\max_{x} |(f(x) - f_{\\mathrm{ttns}}(x))| / f(x)"),
+  plt = plot(xlabel=L"\mathrm{System~size~}d", 
+             ylabel=latexstring("\\mathrm{Max.~rel.~error}"),
+             title=latexstring("\\mathrm{(a)~Max.~Rel.~Error~vs.~System~size~}d"),
              legend=false,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),
@@ -349,8 +350,9 @@ function create_max_abs_error_plot(df, sketching_orders; fontsize=18)
   xticks_pos = Float64.(n_vals)
   xticks_labels = [latexstring("$val") for val in n_vals]
   
-  plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=latexstring("\\mathrm{(b)~Max.~Abs.~Error}~\\max_{x} |f(x) - f_{\\mathrm{ttns}}(x)|"),
+  plt = plot(xlabel=L"\mathrm{System~size~}d", 
+             ylabel=latexstring("\\mathrm{Max.~abs.~error}"),
+             title=latexstring("\\mathrm{(b)~Max.~Abs.~Error~vs.~System~size~}d"),
              legend=false,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),
@@ -427,8 +429,9 @@ function create_prob_range_plot(df, sketching_orders; fontsize=18)
   
   if isempty(all_max_probs) || isempty(all_min_probs)
     println("WARNING: No valid max_prob or min_prob data - creating empty plot")
-    plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-               title=latexstring("\\mathrm{(c)~}f(x)~\\mathrm{Value~range}"),
+    plt = plot(xlabel=L"\mathrm{System~size~}d", 
+               ylabel=latexstring("f(x)~\\mathrm{Value~range}"),
+               title=latexstring("\\mathrm{(c)}"),
                legend=:bottomleft,
                fontsize=fontsize)
     return plt
@@ -459,9 +462,10 @@ function create_prob_range_plot(df, sketching_orders; fontsize=18)
   xticks_pos = Float64.(n_vals)
   xticks_labels = [latexstring("$val") for val in n_vals]
   
-  plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=latexstring("\\mathrm{(c)~}f(x)~\\mathrm{Value~range}"),
-             legend=:bottomleft,
+    plt = plot(xlabel=L"\mathrm{System~size~}d", 
+               ylabel=latexstring("f(x)~\\mathrm{Value~range}"),
+               title=latexstring("\\mathrm{(c)~Function~value~range~vs.~System~size~}d"),
+               legend=:bottomleft,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10,
              yticks=(yticks_pos, yticks_labels),
@@ -556,8 +560,9 @@ function create_runtime_plot(df, sketching_orders; fontsize=18)
   xticks_pos = Float64.(n_vals)
   xticks_labels = [latexstring("$val") for val in n_vals]
   
-  plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=latexstring("\\mathrm{(d)~Runtime~(seconds)}"),
+  plt = plot(xlabel=L"\mathrm{System~size~}d", 
+             ylabel=latexstring("\\mathrm{Runtime~(seconds)}"),
+             title=latexstring("\\mathrm{(d)~Runtime~vs.~System~size~}d"),
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),

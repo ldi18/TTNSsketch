@@ -204,8 +204,8 @@ function create_error_plot(df; threshold=0.1, high_compression=0.1, fontsize=18)
   # Use Plots.jl default color scheme - colors will be consistent across plots
   # by using the same order index
   plt = plot(xlabel=latexstring("\\mathrm{Markov~Sketching~Order}~n_{\\mathrm{Sketch}}"), 
-             ylabel="",
-             title=latexstring("\\mathrm{(a)~Max.~Rel.~Error}~\\max_{x} |(f(x) - f_{\\mathrm{ttns}}(x))| / f(x)"),
+             ylabel=latexstring("\\mathrm{Max.~rel.~error}"),
+             title=latexstring("\\mathrm{(a)~Max.~Rel.~Error~vs.~Markov~Sketching~Order~}n_{\\mathrm{Sketch}}"),
              legend=false,  # No legend in left plot
              xticks=(xticks_pos, xticks_labels),
              yticks=(yticks_pos, yticks_labels),
@@ -260,8 +260,8 @@ function create_max_abs_error_plot(df; threshold=0.1, high_compression=0.1, font
   xticks_labels = [latexstring("$val") for val in order_recovery_vals]
   
   plt = plot(xlabel=latexstring("\\mathrm{Markov~Sketching~Order}~n_{\\mathrm{Sketch}}"), 
-             ylabel="",
-             title=latexstring("\\mathrm{(b)~Max.~Abs.~Error}~\\max_{x} |f(x) - f_{\\mathrm{ttns}}(x)|"),
+             ylabel=latexstring("\\mathrm{Max.~abs.~error}"),
+             title=latexstring("\\mathrm{(b)~Max.~Abs.~Error~vs.~Markov~Sketching~Order~}n_{\\mathrm{Sketch}}"),
              legend=false,
              xticks=(xticks_pos, xticks_labels),
              yticks=(yticks_pos, yticks_labels),
@@ -320,8 +320,8 @@ function create_prob_range_plot(df; fontsize=18)
   yticks_labels = yticks_labels_all[valid_indices]
   
   plt = plot(xlabel=latexstring("\\mathrm{Model~Order}~n_{\\mathrm{Cond}}"), 
-             ylabel="",
-             title=latexstring("\\mathrm{(c)~}f(x)~\\mathrm{Value~range}"),
+             ylabel=latexstring("f(x)~\\mathrm{Value~range}"),
+             title=latexstring("\\mathrm{(c)~Function~value~range~vs.~Model~Order~}n_{\\mathrm{Cond.}} = n_{\\mathrm{Sketch}}"),
              legend=:bottomleft,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10,
@@ -442,8 +442,8 @@ function create_runtime_plot(df; n_vertices::Int, β::Real, fontsize=18)
   xticks_labels = [latexstring("$val") for val in order_recovery_vals]
   
   plt = plot(xlabel=latexstring("\\mathrm{Markov~Sketching~Order}~n_{\\mathrm{Sketch}}"), 
-             ylabel="",
-             title=latexstring("\\mathrm{(d)~Runtime~(seconds)}"),
+             ylabel=latexstring("\\mathrm{Runtime~(seconds)}"),
+             title=latexstring("\\mathrm{(d)~Runtime~vs.~Markov~Sketching~Order~}n_{\\mathrm{Sketch}}"),
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),

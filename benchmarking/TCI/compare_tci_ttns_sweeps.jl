@@ -387,7 +387,8 @@ for (idx, order) in enumerate(unique_orders)
   
   # Create plot for this order showing both accessed and non-accessed
   plt_order = plot(xlabel=latexstring("\\mathrm{Percentage~of~accessed~points~(\\%)}"),
-                   title=latexstring("\\mathrm{Max.~rel.~error~vs.~frac.~accessed}"),
+                   ylabel=latexstring("\\mathrm{Max.~rel.~error}"),
+                   title=latexstring("\\mathrm{Max.~rel.~error~vs.~frac.~accessed~points}"),
                    legend=:topright,
                    yscale=:log10,
                    xticks=x_ticks,
@@ -429,7 +430,8 @@ accessed_y_ticks = ([10.0^exp for exp in accessed_exps],
                     [latexstring("10^{$exp}") for exp in accessed_exps])
 
 plt_accessed = plot(xlabel=latexstring("\\mathrm{Percentage~of~accessed~points~(\\%)}"),
-                   title=latexstring("\\mathrm{Seen~points:~Max.~rel.~error~vs.~frac.~accessed}"),
+                   ylabel=latexstring("\\mathrm{Max.~rel.~error}"),
+                   title=latexstring("\\mathrm{Seen~points:~Max.~rel.~error~vs.~frac.~accessed~points}"),
                    legend=:left,
                    yscale=:log10,
                    xticks=x_ticks,
@@ -457,6 +459,7 @@ for (idx, order) in enumerate(unique_orders)
 end
 
 plt_non_accessed = plot(xlabel=latexstring("\\mathrm{Percentage~of~accessed~points~(\\%)}"),
+                        ylabel=latexstring("\\mathrm{Max.~rel.~error}"),
                         title=latexstring("\\mathrm{Unseen~points:~Max.~rel.~error~vs.~frac.~accessed}"),
                         legend=false,
                         yscale=:log10,

@@ -193,6 +193,7 @@ function create_error_plot(mean_errors_binary, n_samples_binary, mean_errors_lin
   # Create plot (log-log)
   plt = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
              ylabel=latexstring("\\mathrm{Mean~rel.~error}"),
+             title=latexstring("\\mathrm{(a)~Mean~rel.~error~vs.~Number~of~samples~}N"),
              legend=:bottomleft,
              xscale=:log10,
              yscale=:log10,
@@ -268,7 +269,8 @@ function create_unique_ratio_plot(unique_ratios_binary, n_samples_binary,
 
   # Create plot (log-log scale)
   plt = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
-             ylabel=latexstring("\\mathrm{Unique~seen~points~(fraction)}"),
+             ylabel=latexstring("\\mathrm{Number~of~unique~seen~samples~(fraction)}"),
+             title=latexstring("\\mathrm{(b)~Number~of~unique~seen~samples~vs.~Number~of~samples~}N"),
              legend=:bottomright,
              xscale=:log10,
              yscale=:log10,

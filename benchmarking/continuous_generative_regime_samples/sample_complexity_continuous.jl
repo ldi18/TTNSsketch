@@ -10,7 +10,6 @@ using Printf
 using CSV
 using DataFrames
 using Plots
-gr()  # Use GR backend for LaTeX support
 using LaTeXStrings
 using Random
 using Statistics
@@ -360,8 +359,9 @@ function create_error_plot_continuous(df; fontsize=18, label_prefix="(a)")
   xticks_pos = [10.0^exp for exp in sample_exps]
   xticks_labels = [latexstring("10^{$(exp)}") for exp in sample_exps]
   
-  plt = plot(xlabel=L"\mathrm{Number~of~samples~}N", ylabel="",
-             title=L"\mathrm{(a)~Mean~relative~error}",
+  plt = plot(xlabel=L"\mathrm{Number~of~samples~}N",
+             ylabel=L"\mathrm{Mean~rel.~error}",
+             title=L"\mathrm{(a)~Mean~relative~error~vs.~Number~of~samples~}N",
              legend=:topright,
              xticks=(xticks_pos, xticks_labels),
              yticks=(y_ticks_pos, y_ticks_labels),
@@ -412,29 +412,11 @@ function create_error_plot_continuous(df; fontsize=18, label_prefix="(a)")
   # This shows the full range from minimum to maximum relative error (not standard deviation)
   y_err_lower = [max(0.0, y_vals[i] - min_vals[i]) for i in 1:length(y_vals)]
   y_err_upper = [max(0.0, max_vals[i] - y_vals[i]) for i in 1:length(y_vals)]
-  # Manually draw error bars in black
-  # Calculate cap width based on log scale - use a small fraction of the x-axis range
-  x_range = maximum(x_vals) - minimum(x_vals)
-  cap_width = 0.015 * x_range  # 1.5% of x-axis range for cap width
-  for i in 1:length(x_vals)
-    # Vertical line
-    plot!(plt, [x_vals[i], x_vals[i]], 
-          [y_vals[i] - y_err_lower[i], y_vals[i] + y_err_upper[i]],
-          seriestype=:path, color=:black, linewidth=1.5, label="")
-    # Bottom cap (horizontal line)
-    plot!(plt, [x_vals[i] - cap_width, x_vals[i] + cap_width], 
-          [y_vals[i] - y_err_lower[i], y_vals[i] - y_err_lower[i]],
-          seriestype=:path, color=:black, linewidth=1.5, label="")
-    # Top cap (horizontal line)
-    plot!(plt, [x_vals[i] - cap_width, x_vals[i] + cap_width], 
-          [y_vals[i] + y_err_upper[i], y_vals[i] + y_err_upper[i]],
-          seriestype=:path, color=:black, linewidth=1.5, label="")
-  end
-  # Then plot the line and markers in blue
-  plot!(plt, x_vals, y_vals,
+  plot!(plt, x_vals, y_vals, yerror=(y_err_lower, y_err_upper),
         marker=:o, label="", 
         color=plot_color, linecolor=plot_color, markercolor=plot_color,
-        linewidth=2.5, markersize=7)
+        linewidth=2.5, markersize=7,
+        capsize=3, capthickness=1.5)
   
   return plt
 end
@@ -507,8 +489,9 @@ function create_runtime_plot_continuous(df; fontsize=18, label_prefix="(b)")
   xticks_pos = [10.0^exp for exp in sample_exps]
   xticks_labels = [latexstring("10^{$(exp)}") for exp in sample_exps]
   
-  plt = plot(xlabel=L"\mathrm{Number~of~samples~}N", ylabel="",
-             title=L"\mathrm{(b)~Runtime~(seconds)}",
+  plt = plot(xlabel=L"\mathrm{Number~of~samples~}N",
+             ylabel=L"\mathrm{Runtime~(seconds)}",
+             title=L"\mathrm{(b)~Runtime~vs.~Number~of~samples~}N",
              legend=:topright,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),

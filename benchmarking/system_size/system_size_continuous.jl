@@ -329,8 +329,9 @@ function create_error_plot_continuous(df, sketching_orders; fontsize=18, label_p
   xticks_pos = Float64.(n_vals)
   xticks_labels = [latexstring("$val") for val in n_vals]
   
-  plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=L"\mathrm{(a)~Mean~relative~error}",
+  plt = plot(xlabel=L"\mathrm{System~size~}d",
+             ylabel=latexstring("\\mathrm{Mean~rel.~error}"),
+             title=L"\mathrm{(a)~Mean~relative~error~vs.~System~size~}d",
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yticks=(y_ticks_pos, y_ticks_labels),
@@ -495,8 +496,9 @@ function create_runtime_plot_continuous(df, sketching_orders; fontsize=18, label
   xticks_pos = Float64.(n_vals)
   xticks_labels = [latexstring("$val") for val in n_vals]
   
-  plt = plot(xlabel=L"\mathrm{System~size~}d", ylabel="",
-             title=L"\mathrm{(b)~Runtime~(seconds)}",
+  plt = plot(xlabel=L"\mathrm{System~size~}d",
+             ylabel=latexstring("\\mathrm{Runtime~(seconds)}"),
+             title=L"\mathrm{(b)~Runtime~vs.~System~size~}d",
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10, yticks=(yticks_pos, yticks_labels),

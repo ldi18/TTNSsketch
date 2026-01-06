@@ -166,9 +166,9 @@ function run_epsilon_sweep(; n_vertices::Int = 7,
   
   # Create error plots for each conditional order
   error_plots = []
-  titles = [latexstring("\\mathrm{(a)~Max.~Rel.~Error},~n_{\\mathrm{Cond}} = 1"),
-            latexstring("\\mathrm{(b)~Max.~Rel.~Error},~n_{\\mathrm{Cond}} = 2"),
-            latexstring("\\mathrm{(c)~Max.~Rel.~Error},~n_{\\mathrm{Cond}} = 3")]
+  titles = [latexstring("\\mathrm{(a)~Max.~Rel.~Error~vs.~}\\epsilon,~(n_{\\mathrm{Cond.}} = 1)"),
+            latexstring("\\mathrm{(b)~Max.~Rel.~Error~vs.~}\\epsilon,~(n_{\\mathrm{Cond.}} = 2)"),
+            latexstring("\\mathrm{(c)~Max.~Rel.~Error~vs.~}\\epsilon,~(n_{\\mathrm{Cond.}} = 3)")]
   for (i, cond_order) in enumerate(conditional_orders)
     plt = create_error_plot(all_data[cond_order])
     plot!(plt, title=titles[i])
@@ -243,8 +243,7 @@ function create_error_plot(df; fontsize=18)
   
   # Create log-log plot
   plt = plot(xlabel=latexstring("\\epsilon"),
-             ylabel="",
-             title=latexstring("\\mathrm{(a)~Max.~Rel.~Error}~\\max_{x} |(f(x) - f_{\\mathrm{ttns}}(x))| / f(x)"),
+             ylabel=latexstring("\\mathrm{Max.~Rel.~Error}"),
              xscale=:log10,
              yscale=:log10,
              xticks=(x_ticks_pos, x_ticks_labels),
@@ -335,9 +334,9 @@ function create_runtime_plot_combined(all_data::Dict{Int, DataFrame}; fontsize=1
   xticks_pos = Float64.(order_recovery_vals)
   xticks_labels = [latexstring("$val") for val in order_recovery_vals]
   
-  plt = plot(xlabel=latexstring("\\mathrm{Perturbative~Sketching~Order}~n_{\\mathrm{Sketch}}"),
-             ylabel="",
-             title=latexstring("\\mathrm{(d)~Runtime~(seconds)}"),
+  plt = plot(xlabel=latexstring("l_{\\mathrm{max}}"),
+             ylabel=latexstring("\\mathrm{Runtime~(seconds)}"),
+             title=latexstring("\\mathrm{(d)~Runtime~vs.~max.~cardinality~}l_{\\mathrm{max}} = |\\mathcal{S}|"),
              legend=:bottomright,
              xticks=(xticks_pos, xticks_labels),
              yscale=:log10,

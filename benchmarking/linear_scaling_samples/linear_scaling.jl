@@ -176,8 +176,8 @@ function create_plots(mean_errors, min_errors, max_errors, runtimes, d_values;
 
   # Create error plot (left) - linear-linear
   plt_error = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
-                   ylabel="",
-                   title=latexstring("\\mathrm{(a)~Mean~Relative~Error}"),
+                   ylabel=latexstring("\\mathrm{Mean~rel.~error}"),
+                   title=latexstring("\\mathrm{(a)~Mean~rel.~error~vs.~Number~of~samples~}N"),
                    legend=false,
                    xscale=:identity,
                    yscale=:identity,
@@ -200,12 +200,14 @@ function create_plots(mean_errors, min_errors, max_errors, runtimes, d_values;
         mean_errors,
         yerror=(error_below, error_above),
         marker=:o, 
-        color=:blue, linewidth=2.5, markersize=7, markerstrokewidth=0.1)
+        color=:blue, 
+        errorbarcolor=:blue,
+        linewidth=2.5, markersize=7, markerstrokewidth=0.1)
 
   # Create runtime plot (right) - linear-linear
   plt_runtime = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
-                     ylabel="",
-                     title=latexstring("\\mathrm{(b)~Runtime~(second)}"),
+                     ylabel=latexstring("\\mathrm{Runtime~(second)}"),
+                     title=latexstring("\\mathrm{(b)~Runtime~vs.~Number~of~samples~}N"),
                      legend=false,
                      xscale=:identity,
                      yscale=:identity,

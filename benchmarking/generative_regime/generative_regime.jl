@@ -182,7 +182,7 @@ plt_binary = create_plot(unseen_mean_errors_binary, unseen_std_errors_binary, pe
                          y_ticks_labels=y_ticks_labels,
                          y_lims=y_lims,
                          plot_label="\\mathrm{Binary~Tree}",
-                         plot_title="\\mathrm{Binary~tree~(15~vertices)}",
+                         plot_title="\\mathrm{(a)~Binary~tree~(15~vertices)}",
                          plot_fontsize=plot_fontsize,
                          legend_fontsize=legend_fontsize)
 
@@ -191,7 +191,7 @@ plt_linear = create_plot(unseen_mean_errors_linear, unseen_std_errors_linear, pe
                          y_ticks_labels=y_ticks_labels,
                          y_lims=y_lims,
                          plot_label="\\mathrm{Linear}",
-                         plot_title="\\mathrm{Linear~chain~(15~vertices)}",
+                         plot_title="\\mathrm{(b)~Linear~chain~(15~vertices)}",
                          plot_fontsize=plot_fontsize,
                          legend_fontsize=legend_fontsize)
 

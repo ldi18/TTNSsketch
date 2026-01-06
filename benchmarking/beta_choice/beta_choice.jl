@@ -153,8 +153,8 @@ function create_error_plot(df, sketching_label; threshold=1, high_compression=0.
   xticks_labels = [latexstring("$val") for val in beta_dim_vals]
   
   plt = plot(xlabel=latexstring("\\beta_{\\mathrm{dim}}"), 
-             ylabel="",
-             title=latexstring("\\mathrm{(a)~Rel.~Error}~\\langle |(f(x) - f_{\\mathrm{ttns}}(x))| / f(x) \\rangle"),
+             ylabel=latexstring("\\mathrm{Relative~error}"),
+             title=latexstring("\\mathrm{(a)~Perturbative~Sketching:~Rel.~error~vs.~}\\beta_{\\mathrm{dim}}"),
              legend=false,
              xticks=(xticks_pos, xticks_labels),
              yticks=(yticks_pos, yticks_labels),
@@ -264,8 +264,8 @@ function create_runtime_plot(df, sketching_label; n_vertices::Int, β::Real, fon
   xlims_right = maximum(beta_dim_vals) + 0.5
   
   plt = plot(xlabel=latexstring("\\beta_{\\mathrm{dim}}"), 
-             ylabel="",
-             title=latexstring("\\mathrm{(b)~Runtime~(seconds)}"),
+             ylabel=latexstring("\\mathrm{Runtime~(seconds)}"),
+             title=latexstring("\\mathrm{(b)~Perturbative~Sketching:~Runtime~vs.~}\\beta_{\\mathrm{dim}}"),
              legend=:topleft,
              xticks=(xticks_pos, xticks_labels),
              xlims=(xlims_left, xlims_right),
