@@ -46,6 +46,7 @@ function run_generative_regime_experiment(ttns, topology_name::String;
   min_errors = Float64[]  # Minimum relative error
   max_errors = Float64[]  # Maximum relative error
   n_samples_used = Int[]
+  unique_ratios = Float64[]  # Ratio of unique samples to 2^d
 
   println("\n" * "="^60)
   println("Running generative regime experiment (sample-based): $topology_name")
@@ -64,6 +65,14 @@ function run_generative_regime_experiment(ttns, topology_name::String;
       sampled_keys = sample(rng, collect(keys(probability_dict)), ProbabilityWeights(collect(values(probability_dict))), n_samples)
       sample_matrix = reduce(vcat, [collect(key)' for key in sampled_keys])
     end
+    
+    # Count unique samples (unique rows in the sample matrix)
+    # Convert each row to a tuple for hashing
+    unique_samples = Set{Tuple{Vararg{Int}}}()
+    for i in 1:size(sample_matrix, 1)
+      push!(unique_samples, Tuple(sample_matrix[i, :]))
+    end
+    n_unique_samples = length(unique_samples)
     
     # Train TTNS on samples
     ttns_recov = deepcopy(ttns)
@@ -109,12 +118,17 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     min_error = isempty(finite_errors) ? NaN : minimum(finite_errors)
     max_error = isempty(finite_errors) ? NaN : maximum(finite_errors)
     
+    # Calculate unique ratio
+    unique_ratio = n_unique_samples / (2^d)
+    
     push!(mean_errors, mean_error)
     push!(min_errors, min_error)
     push!(max_errors, max_error)
     push!(n_samples_used, n_samples)
+    push!(unique_ratios, unique_ratio)
     
     println("  Number of samples: $n_samples")
+    println("  Unique samples in input space: $n_unique_samples / $(2^d)")
     println("  Total keys: $(length(all_keys)), Keys above threshold ($prob_threshold): $(length(keys_filtered))")
     println("  Mean rel error (finite): $(isnan(mean_error) ? "N/A" : @sprintf("%.6e", mean_error))")
     println("  Min rel error (finite): $(isnan(min_error) ? "N/A" : @sprintf("%.6e", min_error))")
@@ -122,16 +136,20 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     println("  Sum of TTNS: $(sum_ttns(ttns_recov))")
   end
 
-  return mean_errors, min_errors, max_errors, n_samples_used
+  # Print unique ratios as a list
+  println("\n  Unique ratios (unique_samples / 2^$d):")
+  println("  [$(join([@sprintf("%.6f", r) for r in unique_ratios], ", "))]")
+
+  return mean_errors, min_errors, max_errors, n_samples_used, unique_ratios
 end
 
-function create_plot(mean_errors, min_errors, max_errors, n_samples;
-                     y_ticks_pos, y_ticks_labels, y_lims, plot_label::String,
-                     plot_title::String,
-                     plot_fontsize=18, legend_fontsize=16)
+function create_error_plot(mean_errors_binary, n_samples_binary, mean_errors_linear, n_samples_linear;
+                           y_ticks_pos, y_ticks_labels, y_lims,
+                           plot_fontsize=18, legend_fontsize=16)
   # X-axis ticks (use log scale for samples) - format like y ticks
-  # Get unique sample values and format as 10^exponent
-  x_ticks_pos = sort(unique(n_samples))
+  # Get unique sample values from both datasets
+  all_samples = sort(unique(vcat(n_samples_binary, n_samples_linear)))
+  x_ticks_pos = all_samples
   x_ticks_labels = map(x_ticks_pos) do x
     exp = log10(x)
     if exp == round(exp)
@@ -145,10 +163,13 @@ function create_plot(mean_errors, min_errors, max_errors, n_samples;
   x_ticks = (x_ticks_pos, x_ticks_labels)
   
   # Determine y-axis range from actual data (don't cut off)
-  finite_errors = filter(e -> isfinite(e) && e > 0, mean_errors)
-  if !isempty(finite_errors)
-    y_min = 10.0^floor(log10(minimum(finite_errors)))
-    y_max = 10.0^ceil(log10(maximum(finite_errors)))
+  finite_errors_binary = filter(e -> isfinite(e) && e > 0, mean_errors_binary)
+  finite_errors_linear = filter(e -> isfinite(e) && e > 0, mean_errors_linear)
+  all_finite_errors = vcat(finite_errors_binary, finite_errors_linear)
+  
+  if !isempty(all_finite_errors)
+    y_min = 10.0^floor(log10(minimum(all_finite_errors)))
+    y_max = 10.0^ceil(log10(maximum(all_finite_errors)))
     # Ensure we don't go below the minimum specified, but allow going above
     y_min = min(y_min, y_lims[1])
     y_max = max(y_max, y_lims[2])
@@ -166,12 +187,12 @@ function create_plot(mean_errors, min_errors, max_errors, n_samples;
   end
 
   # Sort by number of samples for connected lines
-  sort_idx = sortperm(n_samples)
+  sort_idx_binary = sortperm(n_samples_binary)
+  sort_idx_linear = sortperm(n_samples_linear)
 
   # Create plot (log-log)
   plt = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
              ylabel=latexstring("\\mathrm{Mean~rel.~error}"),
-             title=latexstring(plot_title),
              legend=:bottomleft,
              xscale=:log10,
              yscale=:log10,
@@ -185,12 +206,94 @@ function create_plot(mean_errors, min_errors, max_errors, n_samples;
              titlefontsize=plot_fontsize,
              linewidth=2.5, markersize=7, markerstrokewidth=0.1)
 
-  # Plot without error bars
+  # Plot both curves
   plot!(plt, 
-        [n_samples[i] for i in sort_idx], 
-        [mean_errors[i] for i in sort_idx],
-        marker=:o, label=latexstring(plot_label), 
+        [n_samples_binary[i] for i in sort_idx_binary], 
+        [mean_errors_binary[i] for i in sort_idx_binary],
+        marker=:o, label=latexstring("\\mathrm{Binary~Tree}"), 
         color=:blue, linewidth=2.5, markersize=7, markerstrokewidth=0.1)
+  
+  plot!(plt, 
+        [n_samples_linear[i] for i in sort_idx_linear], 
+        [mean_errors_linear[i] for i in sort_idx_linear],
+        marker=:o, label=latexstring("\\mathrm{Linear}"), 
+        color=:red, linewidth=2.5, markersize=7, markerstrokewidth=0.1)
+
+  return plt
+end
+
+function create_unique_ratio_plot(unique_ratios_binary, n_samples_binary, 
+                                  unique_ratios_linear, n_samples_linear;
+                                  plot_fontsize=18, legend_fontsize=16)
+  # X-axis ticks (use log scale for samples)
+  all_samples = sort(unique(vcat(n_samples_binary, n_samples_linear)))
+  x_ticks_pos = all_samples
+  x_ticks_labels = map(x_ticks_pos) do x
+    exp = log10(x)
+    if exp == round(exp)
+      latexstring(@sprintf("10^{%.0f}", exp))
+    else
+      latexstring(@sprintf("10^{%.1f}", exp))
+    end
+  end
+  x_ticks = (x_ticks_pos, x_ticks_labels)
+  
+  # Y-axis: log scale - determine range from data
+  all_ratios = vcat(unique_ratios_binary, unique_ratios_linear)
+  finite_ratios = filter(r -> isfinite(r) && r > 0, all_ratios)
+  
+  if !isempty(finite_ratios)
+    y_min = 10.0^floor(log10(minimum(finite_ratios)))
+    y_max = 10.0^ceil(log10(maximum(finite_ratios)))
+    # Ensure y_max doesn't exceed 1.0
+    y_max = min(y_max, 1.0)
+    y_lims = (y_min, y_max)
+    
+    # Generate y ticks to cover the full range
+    y_min_exp = floor(log10(y_min))
+    y_max_exp = ceil(log10(y_max))
+    y_ticks_pos = [10.0^exp for exp in y_min_exp:y_max_exp]
+    y_ticks_labels = [latexstring(@sprintf("10^{%.0f}", exp)) for exp in y_min_exp:y_max_exp]
+    y_ticks = (y_ticks_pos, y_ticks_labels)
+  else
+    y_lims = (0.01, 1.0)
+    y_ticks_pos = [0.01, 0.1, 1.0]
+    y_ticks_labels = [latexstring("10^{-2}"), latexstring("10^{-1}"), latexstring("10^{0}")]
+    y_ticks = (y_ticks_pos, y_ticks_labels)
+  end
+
+  # Sort by number of samples for connected lines
+  sort_idx_binary = sortperm(n_samples_binary)
+  sort_idx_linear = sortperm(n_samples_linear)
+
+  # Create plot (log-log scale)
+  plt = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
+             ylabel=latexstring("\\mathrm{Unique~seen~points~(fraction)}"),
+             legend=:bottomright,
+             xscale=:log10,
+             yscale=:log10,
+             xticks=x_ticks,
+             yticks=y_ticks,
+             ylims=y_lims,
+             fontsize=plot_fontsize,
+             tickfontsize=plot_fontsize,
+             guidefontsize=plot_fontsize,
+             legendfontsize=legend_fontsize,
+             titlefontsize=plot_fontsize,
+             linewidth=2.5, markersize=7, markerstrokewidth=0.1)
+
+  # Plot both curves
+  plot!(plt, 
+        [n_samples_binary[i] for i in sort_idx_binary], 
+        [unique_ratios_binary[i] for i in sort_idx_binary],
+        marker=:o, label=latexstring("\\mathrm{Binary~Tree}"), 
+        color=:blue, linewidth=2.5, markersize=7, markerstrokewidth=0.1)
+  
+  plot!(plt, 
+        [n_samples_linear[i] for i in sort_idx_linear], 
+        [unique_ratios_linear[i] for i in sort_idx_linear],
+        marker=:o, label=latexstring("\\mathrm{Linear}"), 
+        color=:red, linewidth=2.5, markersize=7, markerstrokewidth=0.1)
 
   return plt
 end
@@ -207,7 +310,7 @@ plot_fontsize = 18
 legend_fontsize = plot_fontsize - 2
 
 # Run experiment for binary tree
-mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary = 
+mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary, unique_ratios_binary = 
   run_generative_regime_experiment(ttns_binary, "BinaryTree(4)";
                                    y_ticks_pos=y_ticks_pos, 
                                    y_ticks_labels=y_ticks_labels,
@@ -216,7 +319,7 @@ mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary =
                                    order=1)
 
 # Run experiment for linear topology
-mean_errors_linear, min_errors_linear, max_errors_linear, n_samples_linear = 
+mean_errors_linear, min_errors_linear, max_errors_linear, n_samples_linear, unique_ratios_linear = 
   run_generative_regime_experiment(ttns_linear, "Linear(15)";
                                    y_ticks_pos=y_ticks_pos, 
                                    y_ticks_labels=y_ticks_labels,
@@ -225,27 +328,22 @@ mean_errors_linear, min_errors_linear, max_errors_linear, n_samples_linear =
                                    order=1)
 
 # Create plots
-plt_binary = create_plot(mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary;
-                         y_ticks_pos=y_ticks_pos, 
-                         y_ticks_labels=y_ticks_labels,
-                         y_lims=y_lims,
-                         plot_label="\\mathrm{Binary~Tree}",
-                         plot_title="\\mathrm{Binary~tree~(15~vertices)}",
-                         plot_fontsize=plot_fontsize,
-                         legend_fontsize=legend_fontsize)
+plt_error = create_error_plot(mean_errors_binary, n_samples_binary, 
+                              mean_errors_linear, n_samples_linear;
+                              y_ticks_pos=y_ticks_pos, 
+                              y_ticks_labels=y_ticks_labels,
+                              y_lims=y_lims,
+                              plot_fontsize=plot_fontsize,
+                              legend_fontsize=legend_fontsize)
 
-plt_linear = create_plot(mean_errors_linear, min_errors_linear, max_errors_linear, n_samples_linear;
-                         y_ticks_pos=y_ticks_pos, 
-                         y_ticks_labels=y_ticks_labels,
-                         y_lims=y_lims,
-                         plot_label="\\mathrm{Linear}",
-                         plot_title="\\mathrm{Linear~chain~(15~vertices)}",
-                         plot_fontsize=plot_fontsize,
-                         legend_fontsize=legend_fontsize)
+plt_unique = create_unique_ratio_plot(unique_ratios_binary, n_samples_binary,
+                                     unique_ratios_linear, n_samples_linear;
+                                     plot_fontsize=plot_fontsize,
+                                     legend_fontsize=legend_fontsize)
 
 # Combined plot side by side
 fig_width = 1600
-plt_combined = plot(plt_binary, plt_linear, layout=(1, 2), 
+plt_combined = plot(plt_error, plt_unique, layout=(1, 2), 
                     size=(fig_width, 600), dpi=300,
                     plot_title="",
                     left_margin=8Plots.mm, right_margin=8Plots.mm,

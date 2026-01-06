@@ -175,7 +175,7 @@ function create_plots(mean_errors, min_errors, max_errors, runtimes, d_values;
   x_ticks = (x_ticks_pos, x_ticks_labels)
 
   # Create error plot (left) - linear-linear
-  plt_error = plot(xlabel=latexstring("\\mathrm{System~size}~d"),
+  plt_error = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
                    ylabel="",
                    title=latexstring("\\mathrm{(a)~Mean~Relative~Error}"),
                    legend=false,
@@ -203,7 +203,7 @@ function create_plots(mean_errors, min_errors, max_errors, runtimes, d_values;
         color=:blue, linewidth=2.5, markersize=7, markerstrokewidth=0.1)
 
   # Create runtime plot (right) - linear-linear
-  plt_runtime = plot(xlabel=latexstring("\\mathrm{System~size}~d"),
+  plt_runtime = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
                      ylabel="",
                      title=latexstring("\\mathrm{(b)~Runtime~(second)}"),
                      legend=false,
