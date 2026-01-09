@@ -3,7 +3,7 @@ using .TTNSsketch
 using .TTNSsketch.ErrorReporting: report_errors
 using .TTNSsketch.TopologyNotation: vertices, C
 using .TTNSsketch.Sketching: compute_Zwk
-using .TTNSsketch.Evaluate: sum_ttns
+using .TTNSsketch.Evaluate: sum_ttns, evaluate
 using Printf
 using ITensors: set_warn_order, inds, tags, array
 using LinearAlgebra
@@ -45,6 +45,7 @@ function run_generative_regime_experiment(ttns, topology_name::String;
   mean_errors = Float64[]  # Mean relative error
   min_errors = Float64[]  # Minimum relative error
   max_errors = Float64[]  # Maximum relative error
+  kl_divergences = Float64[]  # KL divergence
   n_samples_used = Int[]
   unique_ratios = Float64[]  # Ratio of unique samples to 2^d
 
@@ -93,7 +94,7 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     
     for key in keys_filtered
       p_ref = probability_dict[key]
-      p_model = Evaluate.evaluate(ttns_recov, key)
+      p_model = evaluate(ttns_recov, key)
       
       # Check for invalid model values
       if !isfinite(p_model) || isnan(p_model) || isinf(p_model)
@@ -126,26 +127,65 @@ function run_generative_regime_experiment(ttns, topology_name::String;
     n_keys_above_threshold = length(keys_filtered)
     unique_ratio = n_keys_above_threshold > 0 ? n_unique_samples_above_threshold / n_keys_above_threshold : 0.0
     
-    push!(mean_errors, mean_error)
-    push!(min_errors, min_error)
-    push!(max_errors, max_error)
-    push!(n_samples_used, n_samples)
-    push!(unique_ratios, unique_ratio)
+    # Compute KL divergence: D_KL(P||Q) = sum_x P(x) * log(P(x) / Q(x))
+    # where P is ground truth (probability_dict) and Q is TTNS prediction
+    println("  Computing KL divergence...")
+    ttns_probs = Dict{eltype(keys(probability_dict)), Float64}()
+    let ttns_sum = 0.0
+      for key in keys(probability_dict)
+        prob = abs(evaluate(ttns_recov, key))
+        ttns_probs[key] = prob
+        ttns_sum += prob
+      end
+      
+      # Normalize TTNS probabilities
+      if ttns_sum > 0
+        for key in keys(ttns_probs)
+          ttns_probs[key] /= ttns_sum
+        end
+      end
+    end
     
-    println("  Number of samples: $n_samples")
-    println("  Unique samples above threshold: $n_unique_samples_above_threshold / $n_keys_above_threshold (out of $(2^d) total possible)")
-    println("  Total keys: $(length(all_keys)), Keys above threshold ($prob_threshold): $(length(keys_filtered))")
-    println("  Mean rel error (finite): $(isnan(mean_error) ? "N/A" : @sprintf("%.6e", mean_error))")
-    println("  Min rel error (finite): $(isnan(min_error) ? "N/A" : @sprintf("%.6e", min_error))")
-    println("  Max rel error (finite): $(isnan(max_error) ? "N/A" : @sprintf("%.6e", max_error))")
-    println("  Sum of TTNS: $(sum_ttns(ttns_recov))")
+    # Compute KL divergence
+    let kl_divergence = 0.0
+      for key in keys(probability_dict)
+        p_true = probability_dict[key]
+        q_ttns = get(ttns_probs, key, 0.0)
+        
+        if p_true > 0
+          if q_ttns > 0
+            kl_divergence += p_true * log(p_true / q_ttns)
+          else
+            # If TTNS assigns zero probability but ground truth is positive, KL divergence is infinite
+            kl_divergence = Inf
+            break
+          end
+        end
+      end
+      
+      push!(mean_errors, mean_error)
+      push!(min_errors, min_error)
+      push!(max_errors, max_error)
+      push!(kl_divergences, kl_divergence)
+      push!(n_samples_used, n_samples)
+      push!(unique_ratios, unique_ratio)
+      
+      println("  Number of samples: $n_samples")
+      println("  Unique samples above threshold: $n_unique_samples_above_threshold / $n_keys_above_threshold (out of $(2^d) total possible)")
+      println("  Total keys: $(length(all_keys)), Keys above threshold ($prob_threshold): $(length(keys_filtered))")
+      println("  Mean rel error (finite): $(isnan(mean_error) ? "N/A" : @sprintf("%.6e", mean_error))")
+      println("  Min rel error (finite): $(isnan(min_error) ? "N/A" : @sprintf("%.6e", min_error))")
+      println("  Max rel error (finite): $(isnan(max_error) ? "N/A" : @sprintf("%.6e", max_error))")
+      println("  KL divergence: $(isfinite(kl_divergence) ? @sprintf("%.6e", kl_divergence) : "Inf")")
+      println("  Sum of TTNS: $(sum_ttns(ttns_recov))")
+    end
   end
 
   # Print unique ratios as a list
   println("\n  Unique ratios (unique_samples_above_threshold / keys_above_threshold):")
   println("  [$(join([@sprintf("%.6f", r) for r in unique_ratios], ", "))]")
 
-  return mean_errors, min_errors, max_errors, n_samples_used, unique_ratios
+  return mean_errors, min_errors, max_errors, kl_divergences, n_samples_used, unique_ratios
 end
 
 function create_error_plot(mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary,
@@ -291,8 +331,8 @@ function create_unique_ratio_plot(unique_ratios_binary, n_samples_binary,
 
   # Create plot (log-log scale)
   plt = plot(xlabel=latexstring("\\mathrm{Number~of~samples~}N"),
-             ylabel=latexstring("\\mathrm{Fraction~of~seen~keys}"),
-             title=latexstring("\\mathrm{(b)~Fraction~of~seen~keys~vs.~Number~of~samples~}N"),
+             ylabel=latexstring("\\mathrm{Fraction~of~seen~inputs}"),
+             title=latexstring("\\mathrm{(b)~Fraction~of~seen~inputs~vs.~Number~of~samples~}N"),
              legend=:bottomright,
              xscale=:log10,
              yscale=:log10,
@@ -334,7 +374,7 @@ plot_fontsize = 18
 legend_fontsize = plot_fontsize - 2
 
 # Run experiment for binary tree
-mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary, unique_ratios_binary = 
+mean_errors_binary, min_errors_binary, max_errors_binary, kl_divergences_binary, n_samples_binary, unique_ratios_binary = 
   run_generative_regime_experiment(ttns_binary, "BinaryTree(4)";
                                    y_ticks_pos=y_ticks_pos, 
                                    y_ticks_labels=y_ticks_labels,
@@ -343,13 +383,29 @@ mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary, uniq
                                    order=1)
 
 # Run experiment for linear topology
-mean_errors_linear, min_errors_linear, max_errors_linear, n_samples_linear, unique_ratios_linear = 
+mean_errors_linear, min_errors_linear, max_errors_linear, kl_divergences_linear, n_samples_linear, unique_ratios_linear = 
   run_generative_regime_experiment(ttns_linear, "Linear(15)";
                                    y_ticks_pos=y_ticks_pos, 
                                    y_ticks_labels=y_ticks_labels,
                                    y_lims=y_lims,
                                    plot_label="\\mathrm{Linear}",
                                    order=1)
+
+# Print KL divergence summary
+println("\n" * "="^60)
+println("KL Divergence Summary")
+println("="^60)
+println("Binary Tree:")
+for (i, n_samples) in enumerate(n_samples_binary)
+  kl_val = kl_divergences_binary[i]
+  println("  N = $n_samples: KL = $(isfinite(kl_val) ? @sprintf("%.6e", kl_val) : "Inf")")
+end
+println("\nLinear:")
+for (i, n_samples) in enumerate(n_samples_linear)
+  kl_val = kl_divergences_linear[i]
+  println("  N = $n_samples: KL = $(isfinite(kl_val) ? @sprintf("%.6e", kl_val) : "Inf")")
+end
+println("="^60)
 
 # Create plots
 plt_error = create_error_plot(mean_errors_binary, min_errors_binary, max_errors_binary, n_samples_binary,
